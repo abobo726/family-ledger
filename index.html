@@ -18,7 +18,7 @@ function renderMembers(){$('members').innerHTML=state.members.map((n,i)=>`<div c
 function saveMembers(){let names=state.members.map((_,i)=>$('member'+i).value.trim());if(names.some(n=>!n)||new Set(names).size!==4){alert('四位家人的名稱不可空白或重複');return;}state.members=names;persist();render();alert('家人名稱已更新');}
 function exportBackup(){let blob=new Blob([JSON.stringify({...state,version:2},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='家庭分帳備份_'+today()+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 async function importBackup(event){let file=event.target.files?.[0];event.target.value='';if(!file)return;try{let s=JSON.parse(await file.text());if(!Array.isArray(s.members)||s.members.length!==4||s.members.some(n=>typeof n!=='string')||!Array.isArray(s.entries))throw Error('備份格式不正確');if(!confirm('匯入會取代目前帳本，確定繼續嗎？'))return;state={members:s.members,entries:s.entries,avatars:Array.isArray(s.avatars)?s.avatars:['🐱','🌷','👨','🐻']};persist();render();alert('備份已還原');}catch(e){alert('匯入失敗：'+e.message);}}
-function render(){renderPeople();renderRecords();renderMembers();}render();
+function render(){renderPeople();renderRecords();renderMembers();}
 const SUPA_URL='https://tlfbomkrqzpqkrfibanz.supabase.co',SUPA_KEY='sb_publishable_l01ADVz-aulQmd62CvDrjg_RqlikFcw';
 let token=null,saveTimer=null,loadingCloud=false;
 const avatarHtml=i=>{let v=(state.avatars||[])[i]||['🐱','🌷','👨','🐻'][i];return v.startsWith('data:image/')?`<img src="${v}" alt="頭像" style="width:40px;height:40px;border-radius:50%;object-fit:cover;vertical-align:middle">`:safe(v)};
@@ -29,6 +29,7 @@ async function loadCloud(){loadingCloud=true;try{let data=await api('family_ledg
 function queueCloudSave(){if(!token||loadingCloud)return;clearTimeout(saveTimer);$('cloudStatus').textContent='⏳ 正在同步…';saveTimer=setTimeout(saveCloud,450);}
 async function saveCloud(){try{await api('family_ledger_state?id=eq.1','PATCH',{payload:state,updated_at:new Date().toISOString()});$('cloudStatus').textContent='☁️ 已同步 '+new Date().toLocaleTimeString('zh-TW');}catch(e){$('cloudStatus').textContent='⚠️ 同步失敗，請勿關閉網頁：'+e.message;alert('雲端同步失敗：'+e.message);}}
 function cloudLogout(){clearTimeout(saveTimer);token=null;sessionStorage.removeItem('family_token');state=defaultState();$('ledgerContent').classList.add('hidden');$('loginBox').classList.remove('hidden');$('logoutBtn').classList.add('hidden');$('cloudStatus').textContent='請先登入，才會啟用雲端帳本。';$('loginPassword').value='';render();}
+render();
 (async()=>{let t=sessionStorage.getItem('family_token');if(t){token=t;try{await loadCloud();}catch(e){cloudLogout();}}})();
 
 </script></body></html>
